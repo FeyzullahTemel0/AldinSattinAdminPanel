@@ -4,6 +4,7 @@
 -- ============================================================================
 
 -- Drop existing tables if they exist
+DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS activities CASCADE;
 DROP TABLE IF EXISTS security_logs CASCADE;
 DROP TABLE IF EXISTS social_media_accounts CASCADE;
@@ -16,6 +17,26 @@ DROP TABLE IF EXISTS car_requests CASCADE;
 DROP TABLE IF EXISTS dealers CASCADE;
 DROP TABLE IF EXISTS ads CASCADE;
 DROP TABLE IF EXISTS user_profiles CASCADE;
+DROP TABLE IF EXISTS admins CASCADE;
+
+-- ============================================================================
+-- ADMINS TABLE
+-- ============================================================================
+CREATE TABLE admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  first_name TEXT DEFAULT '',
+  last_name TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  avatar_url TEXT,
+  role TEXT DEFAULT 'admin' CHECK (role IN ('admin', 'super_admin')),
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
+  last_login TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 
 -- ============================================================================
 -- USER PROFILES TABLE
@@ -241,6 +262,21 @@ CREATE TABLE activities (
 );
 
 -- ============================================================================
+-- NOTIFICATIONS TABLE
+-- ============================================================================
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
+  user_type TEXT DEFAULT 'admin' CHECK (user_type IN ('admin', 'dealer', 'customer')),
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT DEFAULT 'info' CHECK (type IN ('success', 'error', 'warning', 'info')),
+  is_read BOOLEAN DEFAULT false,
+  link TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ============================================================================
 -- INDEXES
 -- ============================================================================
 
@@ -285,6 +321,17 @@ CREATE INDEX idx_activities_created_at ON activities(created_at DESC);
 CREATE INDEX idx_security_logs_user_email ON security_logs(user_email);
 CREATE INDEX idx_security_logs_timestamp ON security_logs(timestamp DESC);
 CREATE INDEX idx_security_logs_risk_level ON security_logs(risk_level);
+
+-- Notifications indexes
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_user_type ON notifications(user_type);
+CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
+
+-- Admins indexes
+CREATE INDEX idx_admins_username ON admins(username);
+CREATE INDEX idx_admins_email ON admins(email);
+CREATE INDEX idx_admins_status ON admins(status);
 
 -- ============================================================================
 -- TRIGGERS
@@ -340,9 +387,26 @@ CREATE TRIGGER update_social_media_accounts_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_admins_updated_at
+  BEFORE UPDATE ON admins
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================================================
 -- SAMPLE DATA
 -- ============================================================================
+
+-- Sample Admin (password: admin123)
+INSERT INTO admins (username, email, password, first_name, last_name, phone, role, status) VALUES
+  ('admin', 'admin@carplatform.com', '$2a$10$rB9p8wHYqYqYqYqYqYqYqOuX5j5j5j5j5j5j5j5j5j5j5j5j5j5j5', 'Admin', 'User', '+90 555 000 0000', 'super_admin', 'active');
+
+-- Sample Notifications
+INSERT INTO notifications (user_type, title, message, type, is_read, created_at) VALUES
+  ('admin', 'Yeni ilan eklendi', 'BMW 320i ilanı sisteme eklendi', 'success', false, now() - INTERVAL '1 hour'),
+  ('admin', 'Ödeme alındı', 'Mercedes C200 için ödeme tamamlandı', 'success', false, now() - INTERVAL '3 hours'),
+  ('admin', 'Destek talebi', 'Yeni destek talebi oluşturuldu', 'info', true, now() - INTERVAL '5 hours'),
+  ('admin', 'Şüpheli aktivite', 'Birden fazla başarısız giriş denemesi tespit edildi', 'warning', false, now() - INTERVAL '2 hours'),
+  ('admin', 'Araç talebi', 'Yeni araç talebi oluşturuldu', 'info', false, now() - INTERVAL '30 minutes');
 
 -- Sample Dealers
 INSERT INTO dealers (company_name, contact_name, email, phone, city, total_ads, active_ads, total_sales, total_revenue, rating) VALUES

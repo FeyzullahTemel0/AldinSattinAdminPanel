@@ -1,11 +1,22 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {
+const getAuthToken = () => {
+  return localStorage.getItem('auth_token');
+};
+
+const apiCall = async (endpoint: string, method: string = 'GET', body?: any, requiresAuth: boolean = false) => {
   const url = `${API_BASE_URL}/${endpoint}`;
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
+
+  if (requiresAuth) {
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
 
   const options: RequestInit = {
     method,
@@ -414,5 +425,57 @@ export const settingsApi = {
 
   delete: async (key: string) => {
     return apiCall(`settings/${key}`, 'DELETE');
+  },
+};
+
+export const authApi = {
+  login: async (username: string, password: string) => {
+    return apiCall('auth/login', 'POST', { username, password });
+  },
+
+  logout: async () => {
+    return apiCall('auth/logout', 'POST');
+  },
+
+  getMe: async () => {
+    return apiCall('auth/me', 'GET', undefined, true);
+  },
+
+  updateProfile: async (data: any) => {
+    return apiCall('auth/update-profile', 'PUT', data, true);
+  },
+};
+
+export const notificationsApiClient = {
+  getAll: async (params?: { user_id?: string; is_read?: boolean; type?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.user_id) queryParams.append('user_id', params.user_id);
+    if (params?.is_read !== undefined) queryParams.append('is_read', params.is_read.toString());
+    if (params?.type) queryParams.append('type', params.type);
+
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `notifications?${queryString}` : 'notifications';
+
+    return apiCall(endpoint);
+  },
+
+  getById: async (id: string) => {
+    return apiCall(`notifications/${id}`);
+  },
+
+  create: async (data: any) => {
+    return apiCall('notifications', 'POST', data);
+  },
+
+  markAsRead: async (id: string) => {
+    return apiCall(`notifications/${id}`, 'PUT', { is_read: true });
+  },
+
+  markAllAsRead: async (user_id: string) => {
+    return apiCall(`notifications/mark-all-read/${user_id}`, 'PUT');
+  },
+
+  delete: async (id: string) => {
+    return apiCall(`notifications/${id}`, 'DELETE');
   },
 };

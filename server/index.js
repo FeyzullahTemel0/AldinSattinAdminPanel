@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRouter from './routes/auth.js';
 import adsRouter from './routes/ads.js';
 import paymentsRouter from './routes/payments.js';
 import carRequestsRouter from './routes/car-requests.js';
@@ -21,6 +22,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/auth', authRouter);
 app.use('/api/ads', adsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/car-requests', carRequestsRouter);
