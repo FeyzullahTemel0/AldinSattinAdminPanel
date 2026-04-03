@@ -14,6 +14,8 @@ import SupportTicketsPage from './components/SupportTicketsPage';
 import NotificationsPage from './components/NotificationsPage';
 import SecurityPage from './components/SecurityPage';
 import SettingsPage from './components/SettingsPage';
+import MarketplaceListingsPage from './components/MarketplaceListingsPage';
+import TaxonomyManagementPage from './components/TaxonomyManagementPage';
 import { authApi } from './lib/api';
 
 function App() {
@@ -38,7 +40,7 @@ function App() {
     setLoading(false);
   }, []);
 
-  const handleLoginSuccess = (token: string, adminData: any) => {
+  const handleLoginSuccess = (_token: string, adminData: any) => {
     setIsAuthenticated(true);
     setAdmin(adminData);
   };
@@ -69,6 +71,10 @@ function App() {
         return <DealersPage />;
       case 'users':
         return <UsersPage />;
+      case 'market-listings':
+        return <MarketplaceListingsPage />;
+      case 'taxonomy':
+        return <TaxonomyManagementPage />;
       case 'payments':
         return <PaymentsPage />;
       case 'finance':
@@ -84,7 +90,7 @@ function App() {
       case 'security':
         return <SecurityPage />;
       case 'settings':
-        return <SettingsPage admin={admin} />;
+        return <SettingsPage />;
       default:
         return <Dashboard />;
     }

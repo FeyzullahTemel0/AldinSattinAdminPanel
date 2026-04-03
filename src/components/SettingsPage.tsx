@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, User, Bell, Lock, Globe, Mail, Moon, Sun, Upload, Shield, CreditCard } from 'lucide-react';
+import { Save, User, Bell, Lock, Globe, Mail, Moon, Sun, Upload, Shield, CreditCard, Loader2 } from 'lucide-react';
 import { useTheme } from '../lib/hooks';
 import Toast from './Toast';
 
@@ -12,6 +12,7 @@ interface ToastState {
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
   const { theme, setTheme } = useTheme();
+  const loading = false;
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'info' });
 

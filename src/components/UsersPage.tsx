@@ -27,27 +27,55 @@ export default function UsersPage() {
   });
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const params: any = {};
-        if (selectedRole !== 'all') {
-          params.role = selectedRole;
-        }
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
-
-        const response = await usersApi.getAll(params);
-        setUsers(response.data);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUsers();
   }, [selectedRole, searchTerm]);
+
+  const fetchUsers = async () => {
+    try {
+      const params: any = {};
+      if (selectedRole !== 'all') {
+        params.role = selectedRole;
+      }
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      const response = await usersApi.getAll(params);
+      setUsers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveUser = async () => {
+    try {
+      if (!formData.name || !formData.email) return;
+
+      if (editingUser) {
+        await usersApi.update(editingUser.id, formData);
+      } else {
+        await usersApi.create({ ...formData, status: 'active' });
+      }
+
+      setShowUserForm(false);
+      setEditingUser(null);
+      setFormData({ name: '', email: '', phone: '', role: 'user' });
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error saving user:', error);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    try {
+      await usersApi.delete(id);
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
+  };
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -225,7 +253,10 @@ export default function UsersPage() {
                         >
                           <Edit className="w-4 h-4 text-gray-600 group-hover:text-blue-600" />
                         </button>
-                        <button className="p-2 hover:bg-red-50 rounded-lg transition-colors group">
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                        >
                           <Trash2 className="w-4 h-4 text-gray-600 group-hover:text-red-600" />
                         </button>
                         <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -334,9 +365,7 @@ export default function UsersPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setShowUserForm(false);
-                }}
+                onClick={handleSaveUser}
                 className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
                 {editingUser ? 'Update User' : 'Add User'}

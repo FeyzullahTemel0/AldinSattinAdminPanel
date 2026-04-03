@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, Eye, CheckCircle, XCircle, Clock, CreditCard, Ban, AlertCircle } from 'lucide-react';
+import { Search, Filter, Download, Plus, Eye, CheckCircle, XCircle, Clock, CreditCard, Ban, AlertCircle, Trash2 } from 'lucide-react';
 import { adsApi } from '../lib/api';
 
 interface Ad {
@@ -38,6 +38,38 @@ export default function AdsPage() {
       console.error('Error fetching ads:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createAd = async () => {
+    const title = window.prompt('Ilan basligi');
+    const dealer_name = window.prompt('Galerici adi');
+    if (!title || !dealer_name) return;
+
+    try {
+      await adsApi.create({
+        title,
+        description: '',
+        price: 0,
+        brand: 'Belirtilmedi',
+        model: 'Belirtilmedi',
+        year: new Date().getFullYear(),
+        category: 'general',
+        dealer_id: '00000000-0000-0000-0000-000000000001',
+        dealer_name,
+      });
+      await fetchAds();
+    } catch (error) {
+      console.error('Error creating ad:', error);
+    }
+  };
+
+  const deleteAd = async (id: string) => {
+    try {
+      await adsApi.delete(id);
+      await fetchAds();
+    } catch (error) {
+      console.error('Error deleting ad:', error);
     }
   };
 
@@ -123,7 +155,7 @@ export default function AdsPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">İlanlar</h1>
           <p className="text-gray-600">Tüm araç ilanlarını yönetin ve durumlarını kontrol edin</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+        <button onClick={createAd} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium">
           <Plus className="w-5 h-5" />
           Yeni İlan
         </button>
@@ -242,6 +274,9 @@ export default function AdsPage() {
                           className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                           Manuel Müdahale
+                        </button>
+                        <button onClick={() => deleteAd(ad.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors group">
+                          <Trash2 className="w-4 h-4 text-gray-600 group-hover:text-red-600" />
                         </button>
                       </div>
                     </td>

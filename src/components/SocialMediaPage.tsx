@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Facebook, Instagram, Twitter, Youtube, Linkedin, Send, Mail, MessageCircle, ExternalLink, TrendingUp, Users, Heart, Share2 } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Youtube, Linkedin, Send, Mail, MessageCircle, ExternalLink, TrendingUp, Users, Heart, Share2, Plus, Trash2 } from 'lucide-react';
+import { socialMediaApi } from '../lib/api';
 
 interface SocialMedia {
   id: string;
-  name: string;
   platform: string;
-  url: string;
+  ad_id?: string;
+  post_title: string;
+  post_content?: string;
+  post_url?: string;
+  status: string;
+  views: number;
+  likes: number;
+  shares: number;
+  created_at: string;
   icon: React.ReactNode;
   color: string;
   bgColor: string;
-  followers: string;
-  engagement: string;
-  posts: number;
-  is_active: boolean;
 }
 
 export default function SocialMediaPage() {
@@ -43,22 +47,13 @@ export default function SocialMediaPage() {
       setLoading(true);
       setError(null);
 
-      const mockData = [
-        {
-          id: '1',
-          name: 'Car Platform Official',
-          platform: 'facebook',
-          url: 'https://facebook.com/carplatform',
-          followers: '45000',
-          engagement: '3.5%',
-          posts: 234,
-          is_active: true,
-        },
-      ];
-
-      const formattedData = mockData.map(item => ({
+      const response = await socialMediaApi.getAll();
+      const formattedData = (response.data || []).map((item: any) => ({
         ...item,
-        ...getPlatformConfig(item.platform)
+        ...getPlatformConfig(item.platform),
+        views: Number(item.views || 0),
+        likes: Number(item.likes || 0),
+        shares: Number(item.shares || 0),
       }));
 
       setSocialMedias(formattedData);
@@ -71,23 +66,44 @@ export default function SocialMediaPage() {
     }
   };
 
-  const parseFollowers = (followers: string): number => {
-    const num = parseFloat(followers.replace(/[KkMm]/g, ''));
-    if (followers.includes('K') || followers.includes('k')) return num * 1000;
-    if (followers.includes('M') || followers.includes('m')) return num * 1000000;
-    return num;
+  const createPost = async () => {
+    try {
+      await socialMediaApi.create({
+        platform: 'instagram',
+        post_title: 'Yeni Sosyal Medya Gonderisi',
+        post_content: 'Admin panelinden olusturuldu',
+        status: 'draft',
+      });
+      await fetchSocialMedias();
+    } catch (err) {
+      console.error('Error creating post:', err);
+    }
   };
 
-  const parseEngagement = (engagement: string): number => {
-    return parseFloat(engagement.replace('%', '')) || 0;
+  const publishPost = async (id: string) => {
+    try {
+      await socialMediaApi.update(id, { status: 'published' });
+      await fetchSocialMedias();
+    } catch (err) {
+      console.error('Error publishing post:', err);
+    }
+  };
+
+  const deletePost = async (id: string) => {
+    try {
+      await socialMediaApi.delete(id);
+      await fetchSocialMedias();
+    } catch (err) {
+      console.error('Error deleting post:', err);
+    }
   };
 
   const stats = {
-    totalFollowers: socialMedias.reduce((sum, sm) => sum + parseFollowers(sm.followers), 0),
+    totalFollowers: socialMedias.reduce((sum, sm) => sum + sm.views, 0),
     avgEngagement: socialMedias.length > 0
-      ? (socialMedias.reduce((sum, sm) => sum + parseEngagement(sm.engagement), 0) / socialMedias.length).toFixed(1)
+      ? (socialMedias.reduce((sum, sm) => sum + sm.likes + sm.shares, 0) / socialMedias.length).toFixed(1)
       : '0',
-    totalPosts: socialMedias.reduce((sum, sm) => sum + sm.posts, 0),
+    totalPosts: socialMedias.length,
     monthlyGrowth: 12.5
   };
 
@@ -112,6 +128,14 @@ export default function SocialMediaPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Sosyal Medya Yönetimi</h1>
         <p className="text-gray-600">Tüm sosyal medya hesaplarınıza hızlıca erişin ve yönetin.</p>
       </div>
+
+      <button
+        onClick={createPost}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-fit"
+      >
+        <Plus className="w-4 h-4" />
+        Yeni Gonderi
+      </button>
 
       {error && (
         <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
@@ -176,44 +200,47 @@ export default function SocialMediaPage() {
                   {social.icon}
                 </div>
                 <button
-                  onClick={() => handleOpenLink(social.url)}
+                  onClick={() => handleOpenLink(social.post_url || '#')}
                   className="p-2 bg-white rounded-lg hover:scale-110 transition-transform shadow-sm"
                 >
                   <ExternalLink className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
-              <h3 className={`text-lg font-bold ${social.color}`}>{social.name}</h3>
+              <h3 className={`text-lg font-bold ${social.color}`}>{social.post_title}</h3>
             </div>
 
             <div className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Takipçi</span>
-                  <span className="text-lg font-bold text-gray-900">{social.followers}</span>
+                  <span className="text-sm text-gray-600">Goruntulenme</span>
+                  <span className="text-lg font-bold text-gray-900">{social.views}</span>
                 </div>
-
-                {social.posts > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Gönderi</span>
-                    <span className="text-lg font-bold text-gray-900">{social.posts}</span>
-                  </div>
-                )}
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Etkileşim</span>
-                  <span className="text-lg font-bold text-green-600">{social.engagement}</span>
+                  <span className="text-lg font-bold text-green-600">{social.likes + social.shares}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Durum</span>
+                  <span className="text-lg font-bold text-gray-900">{social.status}</span>
                 </div>
               </div>
 
-              <button
-                onClick={() => handleOpenLink(social.url)}
-                className={`mt-6 w-full py-3 ${social.bgColor} ${social.color} rounded-lg font-medium hover:shadow-md transition-all group-hover:scale-105 flex items-center justify-center gap-2`}
-              >
-                {social.platform === 'email' ? 'E-posta Gönder' :
-                 social.platform === 'whatsapp' ? 'Mesaj Gönder' :
-                 'Hesabı Aç'}
-                <ExternalLink className="w-4 h-4" />
-              </button>
+              <div className="mt-6 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => publishPost(social.id)}
+                  className={`py-2 ${social.bgColor} ${social.color} rounded-lg font-medium hover:shadow-md transition-all`}
+                >
+                  Yayina Al
+                </button>
+                <button
+                  onClick={() => deletePost(social.id)}
+                  className="py-2 rounded-lg font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-all flex items-center justify-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" /> Sil
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -225,7 +252,7 @@ export default function SocialMediaPage() {
           {socialMedias.map((social, idx) => (
             <button
               key={idx}
-              onClick={() => handleOpenLink(social.url)}
+              onClick={() => handleOpenLink(social.post_url || '#')}
               className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all group"
             >
               <div className={`w-12 h-12 ${social.bgColor} rounded-lg flex items-center justify-center ${social.color}`}>
@@ -233,9 +260,9 @@ export default function SocialMediaPage() {
               </div>
               <div className="flex-1 text-left">
                 <p className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {social.name}
+                  {social.post_title}
                 </p>
-                <p className="text-sm text-gray-500 truncate">{social.url}</p>
+                <p className="text-sm text-gray-500 truncate">{social.post_url || '-'}</p>
               </div>
               <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
             </button>

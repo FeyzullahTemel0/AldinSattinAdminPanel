@@ -1,68 +1,44 @@
-import { useState } from 'react';
-import { Bell, Check, X, AlertCircle, CheckCircle, Info, AlertTriangle, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Bell, Check, AlertCircle, CheckCircle, Info, AlertTriangle, Trash2, Plus } from 'lucide-react';
+import { notificationsApi } from '../lib/api';
 
 interface Notification {
   id: string;
   type: 'info' | 'success' | 'warning' | 'error';
   title: string;
   message: string;
-  time: string;
-  read: boolean;
+  created_at: string;
+  is_read: boolean;
+  user_id: string;
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'success',
-      title: 'Yeni İlan Yayınlandı',
-      message: '2024 BMW 320i ilanı başarıyla yayınlandı ve onay bekliyor.',
-      time: '5 dakika önce',
-      read: false
-    },
-    {
-      id: '2',
-      type: 'warning',
-      title: 'Ödeme Hatırlatması',
-      message: 'Ahmet Yılmaz\'ın ödemesi 2 gün içinde yapılmalı.',
-      time: '1 saat önce',
-      read: false
-    },
-    {
-      id: '3',
-      type: 'info',
-      title: 'Yeni Kullanıcı Kaydı',
-      message: 'Mehmet Demir sisteme kayıt oldu.',
-      time: '2 saat önce',
-      read: true
-    },
-    {
-      id: '4',
-      type: 'error',
-      title: 'Sistem Hatası',
-      message: 'Ödeme sisteminde geçici bir hata oluştu.',
-      time: '3 saat önce',
-      read: true
-    },
-    {
-      id: '5',
-      type: 'success',
-      title: 'Ödeme Alındı',
-      message: 'Ali Kaya\'dan 500₺ ödeme alındı.',
-      time: '5 saat önce',
-      read: true
-    },
-    {
-      id: '6',
-      type: 'info',
-      title: 'Yeni Mesaj',
-      message: 'Destek sisteminden yeni bir mesaj var.',
-      time: '1 gün önce',
-      read: true
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newItem, setNewItem] = useState({
+    title: '',
+    message: '',
+    type: 'info',
+    user_id: '00000000-0000-0000-0000-000000000001',
+  });
 
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await notificationsApi.getAll();
+      setNotifications(response.data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -90,25 +66,70 @@ export default function NotificationsPage() {
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const markAsRead = async (id: string) => {
+    try {
+      await notificationsApi.markAsRead(id);
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    const unread = notifications.find((n) => !n.is_read);
+    if (!unread?.user_id) return;
+
+    try {
+      await notificationsApi.markAllAsRead(unread.user_id);
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      await notificationsApi.delete(id);
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const createNotification = async () => {
+    if (!newItem.title || !newItem.message || !newItem.user_id) return;
+
+    try {
+      await notificationsApi.create(newItem);
+      setNewItem({
+        title: '',
+        message: '',
+        type: 'info',
+        user_id: '00000000-0000-0000-0000-000000000001',
+      });
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error creating notification:', error);
+    }
+  };
+
+  const formatTime = (value: string) => {
+    return new Date(value).toLocaleString('tr-TR');
   };
 
   const filteredNotifications = filter === 'unread'
-    ? notifications.filter(n => !n.read)
+    ? notifications.filter(n => !n.is_read)
     : notifications;
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-600">Yukleniyor...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -171,6 +192,40 @@ export default function NotificationsPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
+          <input
+            type="text"
+            placeholder="Baslik"
+            value={newItem.title}
+            onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+            className="md:col-span-1 px-3 py-2 border border-gray-300 rounded-lg"
+          />
+          <input
+            type="text"
+            placeholder="Mesaj"
+            value={newItem.message}
+            onChange={(e) => setNewItem({ ...newItem, message: e.target.value })}
+            className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-lg"
+          />
+          <select
+            value={newItem.type}
+            onChange={(e) => setNewItem({ ...newItem, type: e.target.value as Notification['type'] })}
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
+          >
+            <option value="info">info</option>
+            <option value="success">success</option>
+            <option value="warning">warning</option>
+            <option value="error">error</option>
+          </select>
+          <button
+            onClick={createNotification}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Ekle
+          </button>
+        </div>
+
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => setFilter('all')}
@@ -205,7 +260,7 @@ export default function NotificationsPage() {
               <div
                 key={notification.id}
                 className={`rounded-lg border p-4 transition-all ${
-                  notification.read
+                  notification.is_read
                     ? 'bg-white border-gray-200'
                     : `${getBackgroundColor(notification.type)} border-2`
                 }`}
@@ -217,17 +272,17 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-1">
                       <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                      {!notification.read && (
+                      {!notification.is_read && (
                         <span className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></span>
                       )}
                     </div>
                     <p className="text-gray-600 text-sm mb-2">{notification.message}</p>
-                    <p className="text-xs text-gray-500">{notification.time}</p>
+                    <p className="text-xs text-gray-500">{formatTime(notification.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!notification.read && (
+                    {!notification.is_read && (
                       <button
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={async () => markAsRead(notification.id)}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
                         title="Okundu işaretle"
                       >
@@ -235,7 +290,7 @@ export default function NotificationsPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => deleteNotification(notification.id)}
+                      onClick={async () => deleteNotification(notification.id)}
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
                       title="Sil"
                     >

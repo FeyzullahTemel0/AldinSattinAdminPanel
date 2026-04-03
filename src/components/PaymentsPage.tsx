@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, DollarSign, CreditCard, CheckCircle, XCircle, Clock, TrendingUp } from 'lucide-react';
+import { Search, Filter, Download, DollarSign, CreditCard, CheckCircle, XCircle, Clock, Plus, Trash2 } from 'lucide-react';
 import { paymentsApi } from '../lib/api';
 
 interface Payment {
@@ -24,6 +24,45 @@ export default function PaymentsPage() {
   useEffect(() => {
     fetchPayments();
   }, []);
+
+  const createPayment = async () => {
+    const dealer_name = window.prompt('Galerici adi');
+    const amountValue = window.prompt('Tutar');
+    if (!dealer_name || !amountValue) return;
+
+    try {
+      await paymentsApi.create({
+        ad_id: '',
+        dealer_id: '00000000-0000-0000-0000-000000000001',
+        dealer_name,
+        amount: Number(amountValue),
+        payment_method: 'bank_transfer',
+        status: 'pending',
+        duration_days: 30,
+      });
+      await fetchPayments();
+    } catch (error) {
+      console.error('Error creating payment:', error);
+    }
+  };
+
+  const completePayment = async (id: string) => {
+    try {
+      await paymentsApi.update(id, { status: 'completed' });
+      await fetchPayments();
+    } catch (error) {
+      console.error('Error updating payment:', error);
+    }
+  };
+
+  const removePayment = async (id: string) => {
+    try {
+      await paymentsApi.delete(id);
+      await fetchPayments();
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+    }
+  };
 
   const fetchPayments = async () => {
     try {
@@ -102,6 +141,14 @@ export default function PaymentsPage() {
         <p className="text-gray-600">Tüm ödeme işlemlerini görüntüleyin ve yönetin</p>
       </div>
 
+      <button
+        onClick={createPayment}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-fit"
+      >
+        <Plus className="w-4 h-4" />
+        Yeni Odeme
+      </button>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-2">
@@ -176,6 +223,7 @@ export default function PaymentsPage() {
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-600 uppercase">Durum</th>
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-600 uppercase">Tarih</th>
                 <th className="py-3 px-6 text-left text-xs font-medium text-gray-600 uppercase">İşlem ID</th>
+                <th className="py-3 px-6 text-left text-xs font-medium text-gray-600 uppercase">Aksiyon</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -201,6 +249,24 @@ export default function PaymentsPage() {
                   </td>
                   <td className="py-4 px-6 text-xs font-mono text-gray-500">
                     {payment.id.substring(0, 8)}...
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => completePayment(payment.id)}
+                        className="p-2 rounded hover:bg-green-50 text-green-600"
+                        title="Tamamla"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => removePayment(payment.id)}
+                        className="p-2 rounded hover:bg-red-50 text-red-600"
+                        title="Sil"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

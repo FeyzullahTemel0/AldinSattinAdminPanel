@@ -17,8 +17,9 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      conditions.push(`(name ILIKE $${params.length + 1} OR company_name ILIKE $${params.length + 2} OR email ILIKE $${params.length + 3})`);
       const searchPattern = `%${search}%`;
+      const nextIndex = params.length + 1;
+      conditions.push(`(name ILIKE $${nextIndex} OR company_name ILIKE $${nextIndex + 1} OR email ILIKE $${nextIndex + 2})`);
       params.push(searchPattern, searchPattern, searchPattern);
     }
 

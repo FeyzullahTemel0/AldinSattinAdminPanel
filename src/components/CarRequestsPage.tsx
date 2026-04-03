@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Eye, MessageSquare, CheckCircle, Clock, XCircle, Mail, Phone, MapPin, Car } from 'lucide-react';
+import { Search, Filter, Download, Eye, MessageSquare, CheckCircle, Clock, XCircle, Mail, Phone, MapPin, Car, Plus, Trash2 } from 'lucide-react';
 import { carRequestsApi } from '../lib/api';
 
 interface CarRequest {
@@ -7,14 +7,15 @@ interface CarRequest {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
-  customer_location: string;
+  customer_location?: string;
   vehicle_brand: string;
   vehicle_model: string;
-  year_range: string;
-  body_type: string;
+  year_min?: number;
+  year_max?: number;
+  body_type?: string;
   budget_min: number;
   budget_max: number;
-  status: 'new' | 'active' | 'completed' | 'cancelled';
+  status: 'new' | 'in_progress' | 'completed' | 'cancelled';
   offers_count: number;
   created_at: string;
   notes?: string;
@@ -29,34 +30,77 @@ export default function CarRequestsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const params: any = {};
-        if (selectedStatus !== 'all') {
-          params.status = selectedStatus;
-        }
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
-
-        const response = await carRequestsApi.getAll(params);
-        setRequests(response.data);
-      } catch (error) {
-        console.error('Error fetching car requests:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRequests();
   }, [selectedStatus, searchTerm]);
+
+  const fetchRequests = async () => {
+    try {
+      const params: any = {};
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      const response = await carRequestsApi.getAll(params);
+      setRequests(response.data || []);
+    } catch (error) {
+      console.error('Error fetching car requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createRequest = async () => {
+    const customer_name = window.prompt('Musteri adi');
+    const customer_email = window.prompt('Musteri e-posta');
+    if (!customer_name || !customer_email) return;
+
+    try {
+      await carRequestsApi.create({
+        customer_name,
+        customer_email,
+        customer_phone: '',
+        vehicle_brand: 'Belirtilmedi',
+        vehicle_model: 'Belirtilmedi',
+        year_min: null,
+        year_max: null,
+        budget_min: 0,
+        budget_max: 0,
+        preferred_category: 'genel',
+        notes: '',
+      });
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error creating request:', error);
+    }
+  };
+
+  const updateStatus = async (id: string, status: CarRequest['status']) => {
+    try {
+      await carRequestsApi.update(id, { status });
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error updating request:', error);
+    }
+  };
+
+  const deleteRequest = async (id: string) => {
+    try {
+      await carRequestsApi.delete(id);
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error deleting request:', error);
+    }
+  };
 
   const filteredRequests = requests;
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'new': return 'bg-blue-100 text-blue-700';
-      case 'active': return 'bg-green-100 text-green-700';
+      case 'in_progress': return 'bg-green-100 text-green-700';
       case 'completed': return 'bg-gray-100 text-gray-700';
       case 'cancelled': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-700';
@@ -66,7 +110,7 @@ export default function CarRequestsPage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'new': return 'Yeni';
-      case 'active': return 'Aktif';
+      case 'in_progress': return 'Aktif';
       case 'completed': return 'Tamamlandı';
       case 'cancelled': return 'İptal Edildi';
       default: return status;
@@ -76,7 +120,7 @@ export default function CarRequestsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'new': return <Clock className="w-4 h-4" />;
-      case 'active': return <MessageSquare className="w-4 h-4" />;
+      case 'in_progress': return <MessageSquare className="w-4 h-4" />;
       case 'completed': return <CheckCircle className="w-4 h-4" />;
       case 'cancelled': return <XCircle className="w-4 h-4" />;
       default: return null;
@@ -105,7 +149,7 @@ export default function CarRequestsPage() {
 
   const totalRequests = requests.length;
   const newRequests = requests.filter(r => r.status === 'new').length;
-  const activeRequests = requests.filter(r => r.status === 'active').length;
+  const activeRequests = requests.filter(r => r.status === 'in_progress').length;
   const completedRequests = requests.filter(r => r.status === 'completed').length;
 
   if (loading) {
@@ -122,6 +166,9 @@ export default function CarRequestsPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Araç Talep Formları</h1>
         <p className="text-gray-600">Müşterilerin araç talep formlarını buradan görüntüleyebilir ve yönetebilirsiniz.</p>
       </div>
+      <button onClick={createRequest} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors w-fit">
+        <Plus className="w-4 h-4" /> Yeni Talep
+      </button>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -162,7 +209,7 @@ export default function CarRequestsPage() {
             >
               <option value="all">Tüm Durumlar</option>
               <option value="new">Yeni</option>
-              <option value="active">Aktif</option>
+              <option value="in_progress">Aktif</option>
               <option value="completed">Tamamlandı</option>
               <option value="cancelled">İptal Edildi</option>
             </select>
@@ -217,18 +264,18 @@ export default function CarRequestsPage() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <MapPin className="w-4 h-4" />
-                          <span>{request.customer_location}</span>
+                          <span>{request.customer_location || '-'}</span>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <span className="text-gray-600">Model Yılı:</span>
-                          <span className="font-medium text-gray-900">{request.year_range}</span>
+                          <span className="font-medium text-gray-900">{request.year_min || '-'} - {request.year_max || '-'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <span className="text-gray-600">Kasa Tipi:</span>
-                          <span className="font-medium text-gray-900">{request.body_type}</span>
+                          <span className="font-medium text-gray-900">{request.body_type || '-'}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           <span className="text-gray-600">Bütçe:</span>
@@ -263,6 +310,14 @@ export default function CarRequestsPage() {
                     <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
                       <MessageSquare className="w-4 h-4" />
                       Teklifler
+                    </button>
+                    <button onClick={() => updateStatus(request.id, 'in_progress')} className="flex items-center justify-center gap-2 px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium">
+                      <CheckCircle className="w-4 h-4" />
+                      Aktif Yap
+                    </button>
+                    <button onClick={() => deleteRequest(request.id)} className="flex items-center justify-center gap-2 px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium">
+                      <Trash2 className="w-4 h-4" />
+                      Sil
                     </button>
                   </div>
                 </div>
@@ -342,7 +397,7 @@ export default function CarRequestsPage() {
                     <MapPin className="w-5 h-5 text-gray-600" />
                     <div>
                       <p className="text-sm text-gray-500">Konum</p>
-                      <p className="font-medium text-gray-900">{selectedRequest.customer_location}</p>
+                      <p className="font-medium text-gray-900">{selectedRequest.customer_location || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -359,11 +414,11 @@ export default function CarRequestsPage() {
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Model Yılı</p>
-                    <p className="font-semibold text-gray-900 text-lg">{selectedRequest.year_range}</p>
+                    <p className="font-semibold text-gray-900 text-lg">{selectedRequest.year_min || '-'} - {selectedRequest.year_max || '-'}</p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Kasa Tipi</p>
-                    <p className="font-semibold text-gray-900 text-lg">{selectedRequest.body_type}</p>
+                    <p className="font-semibold text-gray-900 text-lg">{selectedRequest.body_type || '-'}</p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Bütçe Aralığı</p>

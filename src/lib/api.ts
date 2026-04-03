@@ -446,6 +446,95 @@ export const authApi = {
   },
 };
 
+export const marketListingsApi = {
+  getAll: async (params?: { status?: string; seller_type?: string; search?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.seller_type) queryParams.append('seller_type', params.seller_type);
+    if (params?.search) queryParams.append('search', params.search);
+
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `market-listings?${queryString}` : 'market-listings';
+
+    return apiCall(endpoint);
+  },
+
+  getMeta: async () => {
+    return apiCall('market-listings/meta');
+  },
+
+  create: async (data: any) => {
+    return apiCall('market-listings', 'POST', data);
+  },
+
+  update: async (id: string, data: any) => {
+    return apiCall(`market-listings/${id}`, 'PUT', data);
+  },
+
+  delete: async (id: string) => {
+    return apiCall(`market-listings/${id}`, 'DELETE');
+  },
+};
+
+export const taxonomyApi = {
+  getAll: async () => {
+    return apiCall('taxonomy');
+  },
+
+  createBrand: async (data: { name: string; logo_url?: string }) => {
+    return apiCall('taxonomy/brands', 'POST', data);
+  },
+
+  createSeries: async (data: { brand_id: string; name: string; year_start?: number; year_end?: number }) => {
+    return apiCall('taxonomy/series', 'POST', data);
+  },
+
+  createModel: async (data: { brand_id: string; series_id?: string; name: string; year_start?: number; year_end?: number }) => {
+    return apiCall('taxonomy/models', 'POST', data);
+  },
+
+  createPackage: async (data: { model_id: string; name: string }) => {
+    return apiCall('taxonomy/packages', 'POST', data);
+  },
+
+  createSubpackage: async (data: { package_id: string; name: string }) => {
+    return apiCall('taxonomy/subpackages', 'POST', data);
+  },
+
+  deleteBrand: async (id: string) => {
+    return apiCall(`taxonomy/brands/${id}`, 'DELETE');
+  },
+
+  deleteSeries: async (id: string) => {
+    return apiCall(`taxonomy/series/${id}`, 'DELETE');
+  },
+
+  deleteModel: async (id: string) => {
+    return apiCall(`taxonomy/models/${id}`, 'DELETE');
+  },
+
+  deletePackage: async (id: string) => {
+    return apiCall(`taxonomy/packages/${id}`, 'DELETE');
+  },
+
+  deleteSubpackage: async (id: string) => {
+    return apiCall(`taxonomy/subpackages/${id}`, 'DELETE');
+  },
+};
+
+export const securityLogsApi = {
+  getAll: async (params?: { risk_level?: string; search?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.risk_level) queryParams.append('risk_level', params.risk_level);
+    if (params?.search) queryParams.append('search', params.search);
+
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `security-logs?${queryString}` : 'security-logs';
+
+    return apiCall(endpoint);
+  },
+};
+
 export const notificationsApiClient = {
   getAll: async (params?: { user_id?: string; is_read?: boolean; type?: string }) => {
     const queryParams = new URLSearchParams();

@@ -1,44 +1,23 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
-import authRouter from './routes/auth.js';
-import adsRouter from './routes/ads.js';
-import paymentsRouter from './routes/payments.js';
-import carRequestsRouter from './routes/car-requests.js';
-import dealersRouter from './routes/dealers.js';
-import usersRouter from './routes/users.js';
-import financeRouter from './routes/finance.js';
-import socialMediaRouter from './routes/social-media.js';
-import supportTicketsRouter from './routes/support-tickets.js';
-import notificationsRouter from './routes/notifications.js';
-import settingsRouter from './routes/settings.js';
-import dashboardRouter from './routes/dashboard.js';
+import app from './app.js';
+import { initializeDatabase } from './db-init.js';
 
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+const startServer = async () => {
+  try {
+    await initializeDatabase();
+    console.log('Database initialization completed');
 
-app.use('/api/auth', authRouter);
-app.use('/api/ads', adsRouter);
-app.use('/api/payments', paymentsRouter);
-app.use('/api/car-requests', carRequestsRouter);
-app.use('/api/dealers', dealersRouter);
-app.use('/api/users', usersRouter);
-app.use('/api/finance', financeRouter);
-app.use('/api/social-media', socialMediaRouter);
-app.use('/api/support-tickets', supportTicketsRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/settings', settingsRouter);
-app.use('/api/dashboard', dashboardRouter);
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+};
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+startServer();

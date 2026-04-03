@@ -38,7 +38,6 @@ export default function Dashboard() {
     categories,
     activities,
     loading,
-    error,
   } = useDashboard();
 
   const formatCurrency = (amount: number) => {

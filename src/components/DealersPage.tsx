@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Plus, Eye, Edit, Trash2, MapPin, Phone, Mail, Star, FileText, Ban, CheckCircle, XCircle, Store } from 'lucide-react';
+import { Search, Filter, Download, Plus, Eye, Edit, MapPin, Phone, Mail, Star, FileText, Ban, CheckCircle, XCircle, Store } from 'lucide-react';
 import { dealersApi } from '../lib/api';
 
 interface Dealer {
   id: string;
-  name: string;
-  owner_name: string;
+  name?: string;
+  company_name: string;
+  contact_name?: string;
   email: string;
   phone: string;
   city: string;
-  district: string;
+  district?: string;
   address?: string;
   status: 'active' | 'inactive' | 'suspended';
   rating?: number;
@@ -17,7 +18,7 @@ interface Dealer {
   active_ads?: number;
   created_at: string;
   last_login?: string;
-  verified: boolean;
+  verified?: boolean;
 }
 
 export default function DealersPage() {
@@ -30,27 +31,67 @@ export default function DealersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDealers = async () => {
-      try {
-        const params: any = {};
-        if (selectedStatus !== 'all') {
-          params.status = selectedStatus;
-        }
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
-
-        const response = await dealersApi.getAll(params);
-        setDealers(response.data);
-      } catch (error) {
-        console.error('Error fetching dealers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDealers();
   }, [selectedStatus, searchTerm]);
+
+  const fetchDealers = async () => {
+    try {
+      const params: any = {};
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      const response = await dealersApi.getAll(params);
+      setDealers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching dealers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createDealer = async () => {
+    const company = window.prompt('Sirket adi');
+    const email = window.prompt('E-posta');
+    if (!company || !email) return;
+
+    try {
+      await dealersApi.create({
+        company_name: company,
+        name: company,
+        email,
+        phone: '',
+        city: '',
+        address: '',
+        status: 'active',
+      });
+      await fetchDealers();
+    } catch (error) {
+      console.error('Error creating dealer:', error);
+    }
+  };
+
+  const toggleStatus = async (dealer: Dealer) => {
+    const next = dealer.status === 'suspended' ? 'active' : 'suspended';
+    try {
+      await dealersApi.update(dealer.id, { status: next });
+      await fetchDealers();
+    } catch (error) {
+      console.error('Error updating dealer status:', error);
+    }
+  };
+
+  const deleteDealer = async (id: string) => {
+    try {
+      await dealersApi.delete(id);
+      await fetchDealers();
+    } catch (error) {
+      console.error('Error deleting dealer:', error);
+    }
+  };
 
   const filteredDealers = dealers.filter(dealer => {
     const matchesCity = selectedCity === 'all' || dealer.city === selectedCity;
@@ -121,7 +162,7 @@ export default function DealersPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Galerici Yönetimi</h1>
           <p className="text-gray-600">Platformdaki tüm galericileri buradan yönetebilirsiniz.</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+        <button onClick={createDealer} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium">
           <Plus className="w-5 h-5" />
           Yeni Galerici Ekle
         </button>
@@ -204,12 +245,12 @@ export default function DealersPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{dealer.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">{dealer.name || dealer.company_name}</h3>
                       {dealer.verified && (
-                        <CheckCircle className="w-5 h-5 text-blue-600" title="Onaylı" />
+                        <CheckCircle className="w-5 h-5 text-blue-600" />
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{dealer.owner_name}</p>
+                    <p className="text-sm text-gray-600 mb-3">{dealer.contact_name || '-'}</p>
 
                     {dealer.rating && (
                       <div className="flex items-center gap-1 mb-3">
@@ -236,7 +277,7 @@ export default function DealersPage() {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin className="w-4 h-4 flex-shrink-0" />
-                    <span>{dealer.district}, {dealer.city}</span>
+                    <span>{dealer.district ? `${dealer.district}, ` : ''}{dealer.city}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Phone className="w-4 h-4 flex-shrink-0" />
@@ -274,17 +315,20 @@ export default function DealersPage() {
                     <FileText className="w-4 h-4" />
                     İlanları
                   </button>
-                  <button className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                  <button
+                    onClick={() => deleteDealer(dealer.id)}
+                    className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                  >
                     <Edit className="w-4 h-4" />
-                    Düzenle
+                    Sil
                   </button>
                   {dealer.status !== 'suspended' ? (
-                    <button className="flex items-center gap-1 px-3 py-1.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium">
+                    <button onClick={() => toggleStatus(dealer)} className="flex items-center gap-1 px-3 py-1.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium">
                       <Ban className="w-4 h-4" />
                       Askıya Al
                     </button>
                   ) : (
-                    <button className="flex items-center gap-1 px-3 py-1.5 border border-green-300 text-green-600 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium">
+                    <button onClick={() => toggleStatus(dealer)} className="flex items-center gap-1 px-3 py-1.5 border border-green-300 text-green-600 rounded-lg hover:bg-green-50 transition-colors text-sm font-medium">
                       <CheckCircle className="w-4 h-4" />
                       Aktifleştir
                     </button>
@@ -368,7 +412,7 @@ export default function DealersPage() {
                     <Mail className="w-5 h-5 text-gray-600" />
                     <div>
                       <p className="text-sm text-gray-500">Yetkili</p>
-                      <p className="font-medium text-gray-900">{selectedDealer.owner_name}</p>
+                      <p className="font-medium text-gray-900">{selectedDealer.contact_name || '-'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
@@ -390,7 +434,7 @@ export default function DealersPage() {
                     <div>
                       <p className="text-sm text-gray-500">Konum</p>
                       <p className="font-medium text-gray-900">
-                        {selectedDealer.city}, {selectedDealer.district}
+                        {selectedDealer.city}{selectedDealer.district ? `, ${selectedDealer.district}` : ''}
                       </p>
                     </div>
                   </div>

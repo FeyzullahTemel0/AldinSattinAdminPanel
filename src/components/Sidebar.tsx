@@ -1,4 +1,4 @@
-import { X, LayoutDashboard, Users, Package, Settings, BarChart3, FileText, ShoppingCart, Shield, DollarSign, Share2 } from 'lucide-react';
+import { X, LayoutDashboard, Users, Package, Settings, BarChart3, FileText, ShoppingCart, Shield, DollarSign, Share2, Car, ListTree } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -21,6 +21,8 @@ export default function Sidebar({ isOpen, onClose, currentPage = 'dashboard', on
     { name: 'Araç Talepleri', icon: <ShoppingCart className="w-5 h-5" />, href: 'requests', active: currentPage === 'requests' },
     { name: 'Galericiler', icon: <Users className="w-5 h-5" />, href: 'dealers', active: currentPage === 'dealers' },
     { name: 'Müşteriler', icon: <Users className="w-5 h-5" />, href: 'users', active: currentPage === 'users' },
+    { name: 'Pazar İlanları', icon: <Car className="w-5 h-5" />, href: 'market-listings', active: currentPage === 'market-listings' },
+    { name: 'Marka / Seri / Model', icon: <ListTree className="w-5 h-5" />, href: 'taxonomy', active: currentPage === 'taxonomy' },
     { name: 'Ödemeler', icon: <Package className="w-5 h-5" />, href: 'payments', active: currentPage === 'payments' },
     { name: 'Finans', icon: <DollarSign className="w-5 h-5" />, href: 'finance', active: currentPage === 'finance' },
     { name: 'Reklam Yönetimi', icon: <BarChart3 className="w-5 h-5" />, href: 'adsmanagement', active: currentPage === 'adsmanagement' },
