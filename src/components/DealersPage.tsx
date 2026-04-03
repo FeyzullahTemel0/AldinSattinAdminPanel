@@ -13,7 +13,7 @@ interface Dealer {
   district?: string;
   address?: string;
   status: 'active' | 'inactive' | 'suspended';
-  rating?: number;
+  rating?: number | string;
   total_ads?: number;
   active_ads?: number;
   created_at: string;
@@ -29,6 +29,14 @@ export default function DealersPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const parseRating = (value?: number | string) => {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
 
   useEffect(() => {
     fetchDealers();
@@ -146,6 +154,7 @@ export default function DealersPage() {
   const activeDealers = dealers.filter(d => d.status === 'active').length;
   const verifiedDealers = dealers.filter(d => d.verified).length;
   const suspendedDealers = dealers.filter(d => d.status === 'suspended').length;
+  const selectedDealerRating = selectedDealer ? parseRating(selectedDealer.rating) : null;
 
   if (loading) {
     return (
@@ -239,7 +248,10 @@ export default function DealersPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredDealers.map((dealer) => (
+          {filteredDealers.map((dealer) => {
+            const dealerRating = parseRating(dealer.rating);
+
+            return (
             <div key={dealer.id} className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-300">
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -252,19 +264,19 @@ export default function DealersPage() {
                     </div>
                     <p className="text-sm text-gray-600 mb-3">{dealer.contact_name || '-'}</p>
 
-                    {dealer.rating && (
+                    {dealerRating !== null && dealerRating > 0 && (
                       <div className="flex items-center gap-1 mb-3">
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
                             className={`w-4 h-4 ${
-                              i < Math.floor(dealer.rating || 0)
+                              i < Math.floor(dealerRating)
                                 ? 'text-yellow-400 fill-yellow-400'
                                 : 'text-gray-300'
                             }`}
                           />
                         ))}
-                        <span className="text-sm font-medium text-gray-900 ml-1">{dealer.rating.toFixed(1)}</span>
+                        <span className="text-sm font-medium text-gray-900 ml-1">{dealerRating.toFixed(1)}</span>
                       </div>
                     )}
 
@@ -341,7 +353,8 @@ export default function DealersPage() {
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 
@@ -384,12 +397,12 @@ export default function DealersPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Genel Bilgiler</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedDealer.rating && (
+                  {selectedDealerRating !== null && selectedDealerRating > 0 && (
                     <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
                       <Star className="w-5 h-5 text-yellow-500" />
                       <div>
                         <p className="text-sm text-gray-500">Puan</p>
-                        <p className="font-medium text-gray-900">{selectedDealer.rating.toFixed(1)} / 5.0</p>
+                        <p className="font-medium text-gray-900">{selectedDealerRating.toFixed(1)} / 5.0</p>
                       </div>
                     </div>
                   )}
@@ -452,10 +465,10 @@ export default function DealersPage() {
                     <p className="text-sm text-gray-600 mb-1">Aktif İlan</p>
                     <p className="text-2xl font-bold text-gray-900">{selectedDealer.active_ads || 0}</p>
                   </div>
-                  {selectedDealer.rating && (
+                  {selectedDealerRating !== null && selectedDealerRating > 0 && (
                     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <p className="text-sm text-gray-600 mb-1">Puan</p>
-                      <p className="text-2xl font-bold text-gray-900">{selectedDealer.rating.toFixed(1)}</p>
+                      <p className="text-2xl font-bold text-gray-900">{selectedDealerRating.toFixed(1)}</p>
                     </div>
                   )}
                 </div>
