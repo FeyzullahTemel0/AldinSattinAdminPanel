@@ -2,11 +2,22 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api');
 
+type ApiPayload = Record<string, unknown>;
+
 const getAuthToken = () => {
   return localStorage.getItem('auth_token');
 };
 
-const apiCall = async (endpoint: string, method: string = 'GET', body?: any, requiresAuth: boolean = false) => {
+const tryParseJson = (text: string) => {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
+const apiCall = async (endpoint: string, method: string = 'GET', body?: ApiPayload, requiresAuth: boolean = false) => {
   const url = `${API_BASE_URL}/${endpoint}`;
 
   const headers: HeadersInit = {
@@ -30,13 +41,25 @@ const apiCall = async (endpoint: string, method: string = 'GET', body?: any, req
   }
 
   const response = await fetch(url, options);
+  const contentType = response.headers.get('content-type') || '';
+  const rawText = await response.text();
+  const isJsonResponse = contentType.includes('application/json');
+  const parsedBody = isJsonResponse ? tryParseJson(rawText) : null;
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'API request failed');
+    const errorMessage =
+      parsedBody?.error ||
+      parsedBody?.message ||
+      rawText ||
+      `API request failed (${response.status})`;
+    throw new Error(errorMessage);
   }
 
-  return response.json();
+  if (isJsonResponse && parsedBody !== null) {
+    return parsedBody;
+  }
+
+  throw new Error('API returned non-JSON response');
 };
 
 export const adsApi = {
@@ -185,11 +208,11 @@ export const carRequestsApi = {
     return apiCall(`car-requests/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('car-requests', 'POST', data);
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: ApiPayload) => {
     return apiCall(`car-requests/${id}`, 'PUT', data);
   },
 
@@ -214,11 +237,11 @@ export const dealersApi = {
     return apiCall(`dealers/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('dealers', 'POST', data);
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: ApiPayload) => {
     return apiCall(`dealers/${id}`, 'PUT', data);
   },
 
@@ -244,11 +267,11 @@ export const usersApi = {
     return apiCall(`users/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('users', 'POST', data);
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: ApiPayload) => {
     return apiCall(`users/${id}`, 'PUT', data);
   },
 
@@ -294,11 +317,11 @@ export const financeApi = {
     return apiCall(`finance/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('finance', 'POST', data);
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: ApiPayload) => {
     return apiCall(`finance/${id}`, 'PUT', data);
   },
 
@@ -324,11 +347,11 @@ export const socialMediaApi = {
     return apiCall(`social-media/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('social-media', 'POST', data);
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: ApiPayload) => {
     return apiCall(`social-media/${id}`, 'PUT', data);
   },
 
@@ -355,11 +378,11 @@ export const supportTicketsApi = {
     return apiCall(`support-tickets/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('support-tickets', 'POST', data);
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: ApiPayload) => {
     return apiCall(`support-tickets/${id}`, 'PUT', data);
   },
 
@@ -385,7 +408,7 @@ export const notificationsApi = {
     return apiCall(`notifications/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('notifications', 'POST', data);
   },
 
@@ -417,11 +440,11 @@ export const settingsApi = {
     return apiCall(`settings/${key}`);
   },
 
-  createOrUpdate: async (data: any) => {
+  createOrUpdate: async (data: ApiPayload) => {
     return apiCall('settings', 'POST', data);
   },
 
-  update: async (key: string, data: any) => {
+  update: async (key: string, data: ApiPayload) => {
     return apiCall(`settings/${key}`, 'PUT', data);
   },
 
@@ -443,7 +466,7 @@ export const authApi = {
     return apiCall('auth/me', 'GET', undefined, true);
   },
 
-  updateProfile: async (data: any) => {
+  updateProfile: async (data: ApiPayload) => {
     return apiCall('auth/update-profile', 'PUT', data, true);
   },
 };
@@ -465,11 +488,11 @@ export const marketListingsApi = {
     return apiCall('market-listings/meta');
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('market-listings', 'POST', data);
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: ApiPayload) => {
     return apiCall(`market-listings/${id}`, 'PUT', data);
   },
 
@@ -554,7 +577,7 @@ export const notificationsApiClient = {
     return apiCall(`notifications/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: ApiPayload) => {
     return apiCall('notifications', 'POST', data);
   },
 
